@@ -2,9 +2,8 @@
 set -Eeuo pipefail
 
 # Auraxhero X Kernel 0.3 establishment
-# Purpose: safely derive the canonical working tree from the preserved Kernel 0.2 artifact.
-# This script does not invent application code and never deletes the historical ZIP.
-# CI trigger revision: canonicalization must execute on the repository's current workflow definition.
+# Safely derives canonical source from the preserved Kernel 0.2 artifact.
+# Historical artifacts are preserved; sensitive/live operational material is not promoted.
 
 ZIP_NAME='AURAXHERO_X_UNIFIED_KERNEL_0.2 3.zip'
 COMMIT_MODE="${COMMIT:-no}"
@@ -64,8 +63,6 @@ done < <(find "$CANON_ROOT" -type f -print0)
   echo ']'
 } | jq -c '.' > "$HIST_INDEX"
 
-# Preserve any pre-existing repository file that conflicts with canonical historical source.
-# It is moved into provenance rather than deleted or silently overwritten.
 PRECANON_INDEX="$WORK_DIR/precanonical.jsonl"
 : > "$PRECANON_INDEX"
 while IFS= read -r -d '' src; do
@@ -115,12 +112,22 @@ if [ -s "$findings" ]; then
 fi
 
 [ -f package.json ] || fail 'package.json missing after canonicalization'
-PACKAGE_MANAGER='npm'; INSTALL_CMD='npm ci'; RUN_CMD='npm run'
+PACKAGE_MANAGER='npm'; INSTALL_CMD='npm install'; RUN_CMD='npm run'
 if [ -f pnpm-lock.yaml ]; then PACKAGE_MANAGER='pnpm'; INSTALL_CMD='pnpm install --frozen-lockfile'; RUN_CMD='pnpm run';
 elif [ -f yarn.lock ]; then PACKAGE_MANAGER='yarn'; INSTALL_CMD='yarn install --immutable'; RUN_CMD='yarn run';
-elif [ -f bun.lockb ] || [ -f bun.lock ]; then PACKAGE_MANAGER='bun'; INSTALL_CMD='bun install --frozen-lockfile'; RUN_CMD='bun run'; fi
+elif [ -f bun.lockb ] || [ -f bun.lock ]; then PACKAGE_MANAGER='bun'; INSTALL_CMD='bun install --frozen-lockfile'; RUN_CMD='bun run';
+elif [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then PACKAGE_MANAGER='npm'; INSTALL_CMD='npm ci'; RUN_CMD='npm run'; fi
 command -v "$PACKAGE_MANAGER" >/dev/null 2>&1 || fail "required package manager not available: $PACKAGE_MANAGER"
 $INSTALL_CMD
+
+# A lockfile is generated only when the historical source did not contain one, so verification can remain
+# reproducible after this establishment commit without pretending a lockfile existed historically.
+GENERATED_LOCK='false'
+if [ "$PACKAGE_MANAGER" = 'npm' ] && [ ! -f package-lock.json ] && [ -f package.json ]; then
+  npm install --package-lock-only --ignore-scripts
+  GENERATED_LOCK='true'
+fi
+
 has_typecheck="$(jq -r '.scripts.typecheck // empty' package.json)"
 has_build="$(jq -r '.scripts.build // empty' package.json)"
 has_test="$(jq -r '.scripts.test // empty' package.json)"
@@ -132,9 +139,9 @@ if [ -n "$has_test" ]; then $RUN_CMD test; TEST_STATUS='PASSED'; fi
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 jq -n --arg zip "$ZIP_NAME" --arg sha "$ZIP_SHA256" --arg root "$CANON_ROOT" --arg kernel "$KERNEL_VERSION" \
-  --arg branch "$BRANCH" --arg pm "$PACKAGE_MANAGER" --arg install "$INSTALL_CMD" --arg typecheck "$TYPECHECK_STATUS" --arg build "$BUILD_STATUS" --arg tests "$TEST_STATUS" \
+  --arg branch "$BRANCH" --arg pm "$PACKAGE_MANAGER" --arg install "$INSTALL_CMD" --arg lock "$GENERATED_LOCK" --arg typecheck "$TYPECHECK_STATUS" --arg build "$BUILD_STATUS" --arg tests "$TEST_STATUS" \
   --argjson excluded "$excluded_count" --argjson files "$file_count" --argjson precanon "$precanon_count" \
-  '{source:{historical_zip:$zip,zip_sha256:$sha,integrity:"verified"},canonicalization:{status:"verified",canonical_root:$root,canonical_file_count:$files,precanonical_conflict_count:$precanon},preservation:{historical_zip_preserved:true,excluded_artifacts_preserved_in_zip:true,precanonical_conflicts_preserved:true},verification:{package_manager:$pm,install_command:$install,typecheck:$typecheck,build:$build,tests:$tests},security:{status:"passed_high_confidence_scan"},git:{branch:$branch},blockers:[]}' > "$REPORT_JSON"
+  '{source:{historical_zip:$zip,zip_sha256:$sha,integrity:"verified"},canonicalization:{status:"verified",canonical_root:$root,canonical_file_count:$files,precanonical_conflict_count:$precanon},preservation:{historical_zip_preserved:true,excluded_artifacts_preserved_in_zip:true,precanonical_conflicts_preserved:true},verification:{package_manager:$pm,install_command:$install,lockfile_generated:$lock,typecheck:$typecheck,build:$build,tests:$tests},security:{status:"passed_high_confidence_scan"},git:{branch:$branch},blockers:[]}' > "$REPORT_JSON"
 
 git add ARTIFACT_FILTRATION.md "$HIST_INDEX" "$PROV_MANIFEST" "$REPORT_JSON" .provenance/precanonical
 while IFS= read -r -d '' p; do git add -- "$p"; done < <(find app lib src pages components public scripts -type f -print0 2>/dev/null || true)
