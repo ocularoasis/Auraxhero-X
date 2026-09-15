@@ -1,0 +1,33 @@
+{
+  "source": {
+    "historical_zip": "AURAXHERO_X_UNIFIED_KERNEL_0.2 3.zip",
+    "zip_sha256": "54a77d1bd1e61266cff23e5730b5b9a14b4fa0c954ba5526931daa350901bb07",
+    "integrity": "verified"
+  },
+  "canonicalization": {
+    "status": "verified",
+    "canonical_root": "/tmp/auraxhero-kernel.3KJDLl/extracted",
+    "canonical_file_count": 41,
+    "precanonical_conflict_count": 1
+  },
+  "preservation": {
+    "historical_zip_preserved": true,
+    "excluded_artifacts_preserved_in_zip": true,
+    "precanonical_conflicts_preserved": true
+  },
+  "verification": {
+    "package_manager": "npm",
+    "install_command": "npm install",
+    "lockfile_generated": "false",
+    "typecheck": "PASSED",
+    "build": "PASSED",
+    "tests": "NOT_CONFIGURED"
+  },
+  "security": {
+    "status": "passed_high_confidence_scan"
+  },
+  "git": {
+    "branch": "reconcile/auraxhero-x-kernel"
+  },
+  "blockers": []
+}
