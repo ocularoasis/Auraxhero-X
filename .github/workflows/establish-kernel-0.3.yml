@@ -1,9 +1,12 @@
-name: Establish Kernel 0.3
+name: Establish Kernel 0.3 (manual, non-recursive)
 
 on:
-  push:
-    branches:
-      - establish-kernel-0.3
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Commit verified canonical source to establish-kernel-0.3"
+        required: true
+        default: "no"
 
 permissions:
   contents: write
@@ -17,19 +20,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Ensure unzip and jq are available
-        run: sudo apt-get update && sudo apt-get install -y unzip jq
-
-      - name: Make scripts executable
+      - name: Ensure prerequisites
         run: |
-          chmod +x scripts/establish_kernel_0_3.sh
+          sudo apt-get update
+          sudo apt-get install -y unzip jq coreutils file
 
-      - name: Run kernel establishment script
+      - name: Make script executable
+        run: chmod +x scripts/establish_kernel_0_3.sh
+
+      - name: Run establishment script
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT: ${{ github.event.inputs.commit }}
         run: |
           set -euo pipefail
           ./scripts/establish_kernel_0_3.sh
 
-      - name: Report status
-        run: echo "Kernel 0.3 establishment workflow completed. If the script succeeded it has committed the canonical tree to this branch. See commit history for details."
+      - name: Upload report and artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-establish-report
+          path: |
+            .kernel_establish_report.json
+            historical-excluded/index.json
+            .provenance/manifest.json
+
+      - name: Complete
+        run: echo "Establishment workflow finished. Artifacts uploaded. If commit=yes and all verification passed, the canonical tree is committed to this branch."

@@ -1,162 +1,296 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Strict deterministic Kernel 0.3 establishment script
+# Requirements enforced per Auraxhero X directive
+
 ZIP_NAME="AURAXHERO_X_UNIFIED_KERNEL_0.2 3.zip"
-WORKDIR=".kernel_extract_workdir"
-EXTRACT_DIR="$WORKDIR/extracted"
-HIST_DIR="historical-excluded"
-HIST_INDEX="$HIST_DIR/index.json"
+COMMIT_MODE="${COMMIT:-no}"
+KERNEL_VERSION="0.3"
+WORK_TMP_ROOT=".kernel_extract_workdir"
+EXTRACT_DIR="$WORK_TMP_ROOT/extracted"
+HIST_INDEX="historical-excluded/index.json"
 PROV_DIR=".provenance"
 PROV_MANIFEST="$PROV_DIR/manifest.json"
+REPORT_JSON=".kernel_establish_report.json"
 
-# Excluded patterns (do not import into canonical tree)
-EXCLUDE_PATTERNS=("*.sql" "*.sqlite" "*.bak" "backups/*" "*.env" ".env*" "*.pem" "*.key" "*.p12" "*.jks" "*.crt" "credentials*" "*token*" "*secret*" "*brindlewick*" )
+# Exclusion patterns (exact and sensible patterns)
+EXCLUDE_PATTERNS=("*.sql" "*.sqlite" "*.bak" "backups/*" "*.env" ".env*" "*.pem" "*.key" "*.p12" "*.jks" "*.crt" "credentials*" "tokens*" ".docker/config.json" ".git-credentials" "secret*")
 
-echo "Starting Kernel 0.3 establishment script"
-mkdir -p "$WORKDIR" "$EXTRACT_DIR" "$HIST_DIR" "$PROV_DIR"
-
-# Ensure ZIP exists
-if [ ! -f "$ZIP_NAME" ]; then
-  echo "ERROR: ZIP artifact '$ZIP_NAME' not found at repo root. Aborting." >&2
-  exit 2
-fi
-
-# Unpack the ZIP into a temporary extraction directory
-unzip -qq -o "$ZIP_NAME" -d "$EXTRACT_DIR"
-
-# Build list of excluded files and compute sha256 for index
-echo "[]" > "$HIST_INDEX"
-
-# Function to check if path matches any exclude pattern (basic globbing via bash)
-matches_exclude() {
-  local p="$1"
-  for pat in "${EXCLUDE_PATTERNS[@]}"; do
-    if [[ "$p" == $pat || "$p" == ${pat#*/} || "$p" == */${pat#*/} ]]; then
-      return 0
-    fi
-    # Also test using bash extglob-style match
-    if [[ "$p" == $pat ]]; then
-      return 0
-    fi
-  done
-  # fallback: check name components for keywords
-  local lowerp=$(echo "$p" | tr '[:upper:]' '[:lower:]')
-  if [[ "$lowerp" == *secret* || "$lowerp" == *token* || "$lowerp" == *credentials* || "$lowerp" == *brindlewick* ]]; then
-    return 0
-  fi
-  return 1
+# helper: fail with message
+fail() {
+  echo "FATAL: $*" >&2
+  exit 1
 }
 
-# Walk extracted files and gather excluded files
-excluded_entries=()
-while IFS= read -r -d '' file; do
-  # file is full path; get relative path inside extraction
-  relpath="${file#$EXTRACT_DIR/}"
-  if matches_exclude "$relpath"; then
-    # compute sha256 of the file bytes
-    sha=$(sha256sum "$file" | awk '{print $1}')
-    excluded_entries+=("{\"path\": \"$relpath\", \"sha256\": \"$sha\"}")
-  fi
-done < <(find "$EXTRACT_DIR" -type f -print0)
+echo "[kernel-establish] start: commit_mode=$COMMIT_MODE"
 
-# Write historical index JSON
-if [ ${#excluded_entries[@]} -gt 0 ]; then
-  printf "%s\n" "[${excluded_entries[*]}]" > "$HIST_INDEX"
-else
-  # empty array
-  echo "[]" > "$HIST_INDEX"
+# 1) ensure ZIP exists at repo root and compute SHA256
+if [ ! -f "$ZIP_NAME" ]; then
+  fail "Historical ZIP '$ZIP_NAME' not found in repository root"
 fi
 
-# Remove excluded files from the extraction tree (do not import them)
-while IFS= read -r -d '' file; do
-  relpath="${file#$EXTRACT_DIR/}"
-  if matches_exclude "$relpath"; then
-    rm -f "$file"
-  fi
-done < <(find "$EXTRACT_DIR" -type f -print0)
+if command -v sha256sum >/dev/null 2>&1; then
+  ZIP_SHA256=$(sha256sum "$ZIP_NAME" | awk '{print $1}')
+elif command -v shasum >/dev/null 2>&1; then
+  ZIP_SHA256=$(shasum -a 256 "$ZIP_NAME" | awk '{print $1}')
+else
+  fail "No sha256 tool available (sha256sum or shasum required)"
+fi
 
-# Prepare to move canonical files into the repository root
-# Ensure we will not create duplicates: check for existing canonical dirs in repo root
-collision_found=0
-for cand in app lib package.json; do
-  if [ -e "$cand" ]; then
-    echo "Collision detected: $cand already exists in the repository root. Aborting extraction to avoid duplicate canonical trees." >&2
-    collision_found=1
+echo "[kernel-establish] historical ZIP: $ZIP_NAME"
+echo "[kernel-establish] SHA256: $ZIP_SHA256"
+
+# 2) prepare clean temporary workspace
+rm -rf "$WORK_TMP_ROOT"
+mkdir -p "$EXTRACT_DIR"
+
+# 3) extract into temporary workspace
+echo "[kernel-establish] extracting ZIP into $EXTRACT_DIR"
+unzip -q "$ZIP_NAME" -d "$EXTRACT_DIR" || fail "unzip failed"
+
+# 4) remove macOS metadata and AppleDouble
+echo "[kernel-establish] removing macOS metadata"
+find "$EXTRACT_DIR" -name '__MACOSX' -prune -exec rm -rf {} +
+find "$EXTRACT_DIR" -name '.DS_Store' -type f -delete
+# remove AppleDouble files (._*)
+find "$EXTRACT_DIR" -name '._*' -type f -delete || true
+
+# 5) discover candidate canonical roots
+# Rule: canonical root = dir containing package.json AND (app/ OR lib/ OR tsconfig.json OR next.config.ts OR next.config.js)
+mapfile -t package_dirs < <(find "$EXTRACT_DIR" -type f -name 'package.json' -printf '%h\n' | sort -u)
+
+valid_roots=()
+for pd in "${package_dirs[@]:-}"; do
+  if [ -d "$pd/app" ] || [ -d "$pd/lib" ] || [ -f "$pd/tsconfig.json" ] || [ -f "$pd/next.config.ts" ] || [ -f "$pd/next.config.js" ]; then
+    valid_roots+=("$pd")
   fi
 done
-if [ $collision_found -ne 0 ]; then
-  echo "Please resolve collisions on the branch before running this script. Exiting." >&2
-  exit 3
+
+if [ ${#valid_roots[@]} -eq 0 ]; then
+  echo "ERROR: no canonical source root found. package.json located in: ${package_dirs[*]:-none}" >&2
+  jq -n --arg zip "$ZIP_NAME" --arg zipsha "$ZIP_SHA256" '{source:{historical_zip:$zip,zip_sha256:$zipsha,integrity:"unverified"},canonicalization:{status:"failed",reason:"no-canonical-root"}}' > "$REPORT_JSON" || true
+  fail "no canonical source root found"
 fi
 
-# Move extracted contents into repo root (only the top-level entries from the extraction)
-# If extraction contained a single top-level folder with the app, lib, etc., move its contents up
-# Find top-level entries inside $EXTRACT_DIR
-shopt -s dotglob
-top_level=("$EXTRACT_DIR"/*)
-if [ ${#top_level[@]} -eq 1 ] && [ -d "${top_level[0]}" ]; then
-  echo "Single top-level directory found in the ZIP — moving its contents to repo root"
-  mv "${top_level[0]}"/* . || true
+if [ ${#valid_roots[@]} -gt 1 ]; then
+  echo "ERROR: multiple canonical roots detected: ${valid_roots[*]}" >&2
+  jq -n --arg zip "$ZIP_NAME" --arg zipsha "$ZIP_SHA256" --argjson candidates "$(printf '%s\n' "${valid_roots[@]}" | jq -R -s -c 'split("\n")[:-1]')" '{source:{historical_zip:$zip,zip_sha256:$zipsha},canonicalization:{status:"failed",reason:"multiple-canonical-roots",candidates:$candidates}}' > "$REPORT_JSON" || true
+  fail "multiple canonical roots detected"
+fi
+
+CANON_ROOT="${valid_roots[0]}"
+echo "[kernel-establish] canonical root discovered: $CANON_ROOT"
+
+# 6) verify canonical root contains package.json
+if [ ! -f "$CANON_ROOT/package.json" ]; then
+  fail "canonical root missing package.json"
+fi
+
+# 7) collision safety: ensure repository root does not already contain canonical root artifacts
+collisions_found=()
+for p in app lib package.json; do
+  if [ -e "$p" ]; then
+    collisions_found+=("$p")
+  fi
+done
+if [ ${#collisions_found[@]} -gt 0 ]; then
+  echo "ERROR: collision detected in branch working tree: ${collisions_found[*]}" >&2
+  jq -n --arg zip "$ZIP_NAME" --arg zipsha "$ZIP_SHA256" --argjson collisions "$(printf '%s\n' "${collisions_found[@]}" | jq -R -s -c 'split("\n")[:-1]')" '{source:{historical_zip:$zip,zip_sha256:$zipsha},canonicalization:{status:"failed",reason:"collision",collisions:$collisions}}' > "$REPORT_JSON" || true
+  fail "collision detected in repo root: ${collisions_found[*]}"
+fi
+
+# 8) prepare historical-excluded index
+mkdir -p "$(dirname "$HIST_INDEX")"
+# start empty array
+jq -n '[]' > "$HIST_INDEX"
+
+# 9) scan for excluded artifacts under the canonical root; classify and record only metadata
+excluded_list=()
+while IFS= read -r -d $'\0' file; do
+  relpath="${file#$CANON_ROOT/}"
+  classification=""
+  reason=""
+  for pat in "${EXCLUDE_PATTERNS[@]}"; do
+    # Use bash pattern matching; convert pat to glob
+    if [[ "$relpath" == $pat || "$relpath" == ${pat#*/} || "$relpath" == */${pat#*/} || "$relpath" == *"${pat%*}"* ]]; then
+      classification="$pat"
+      reason="matched pattern $pat"
+      break
+    fi
+  done
+  # content/path-based checks
+  lower=$(printf '%s' "$relpath" | tr '[:upper:]' '[:lower:]')
+  if [ -z "$classification" ]; then
+    if [[ "$lower" == *"privatekey"* || "$lower" == *".pem" || "$lower" == *"certificate"* ]]; then
+      classification="sensitive:key"
+      reason="filename suggests key/certificate"
+    fi
+  fi
+  if [ -n "$classification" ]; then
+    if command -v sha256sum >/dev/null 2>&1; then
+      sha=$(sha256sum "$file" | awk '{print $1}')
+    else
+      sha=$(shasum -a 256 "$file" | awk '{print $1}')
+    fi
+    entry=$(jq -n --arg p "$relpath" --arg s "$sha" --arg c "$classification" --arg r "$reason" '{path:$p,sha256:$s,classification:$c,reason:$r}')
+    excluded_list+=("$entry")
+    rm -f "$file" || fail "failed to remove excluded file $file"
+  fi
+done < <(find "$CANON_ROOT" -type f -print0)
+
+# write historical index
+if [ ${#excluded_list[@]} -gt 0 ]; then
+  # build JSON array safely
+  printf '%s\n' "[${excluded_list[*]}]" | jq -c '.' > "$HIST_INDEX" || fail "failed to write $HIST_INDEX"
 else
-  echo "Multiple top-level entries found. Moving all top-level entries into repo root"
-  mv "$EXTRACT_DIR"/* . || true
+  jq -n '[]' > "$HIST_INDEX"
 fi
 
-# Record provenance: which files came from the ZIP (sha256 of ZIP + list of moved files)
-zip_sha=$(sha256sum "$ZIP_NAME" | awk '{print $1}')
-# create manifest with ZIP sha and list of canonical files
-jq -n --arg zip "$ZIP_NAME" --arg zipsha "$zip_sha" '{zip: $zip, zip_sha256: $zipsha, extracted_at: (now|tostring)}' > "$PROV_MANIFEST"
+# 10) create provenance manifest
+mkdir -p "$PROV_DIR"
+extracted_at=$(date --iso-8601=seconds)
+# compute imported list
+mapfile -t imported_files < <(cd "$CANON_ROOT" && find . -type f -print | sed 's|^./||')
+imported_count=${#imported_files[@]}
+excluded_count=$(jq length "$HIST_INDEX")
 
-# Stage provenance and index files
-git add "$HIST_INDEX" "$PROV_MANIFEST" $PROV_DIR || true
+jq -n --arg zip "$ZIP_NAME" --arg zipsha "$ZIP_SHA256" --arg extracted_at "$extracted_at" \
+  --arg canon_root "${CANON_ROOT#$EXTRACT_DIR/}" --arg kernel_version "$KERNEL_VERSION" \
+  --argjson imported_count "$imported_count" --argjson excluded_count "$excluded_count" \
+  '{historical_zip:$zip,zip_sha256:$zipsha,extracted_at:$extracted_at,canonical_root:$canon_root,kernel_version:$kernel_version,imported_file_count:$imported_count,excluded_file_count:$excluded_count}' > "$PROV_MANIFEST" || fail "failed to write provenance manifest"
 
-# Inspect package.json if present and determine commands
-if [ -f package.json ]; then
-  echo "package.json found — using its scripts for install/typecheck/build/tests"
-  # Install dependencies
-  if [ -f package-lock.json ]; then
-    npm ci
-  else
-    npm install
+# 11) copy canonical files into repo root carefully
+# copy directory contents without creating nested app/app etc.
+echo "[kernel-establish] copying canonical root contents to repo root"
+# Use rsync-like behavior via tar to preserve paths
+pushd "$CANON_ROOT" >/dev/null
+# create list of files
+mapfile -t file_list < <(find . -type f -print)
+if [ ${#file_list[@]} -eq 0 ]; then
+  fail "no files found inside canonical root"
+fi
+for f in "${file_list[@]}"; do
+  # remove leading ./
+  rel=${f#./}
+  dest_dir=$(dirname "$rel")
+  mkdir -p "$PWD/../.."/"$dest_dir"
+  cp -p -- "$rel" "$PWD/../.."/"$dest_dir/" || cp -p "$rel" "$PWD/../.."/"$dest_dir/"
+done
+popd >/dev/null
+
+# verify no nested app/app or lib/lib
+if [ -d "app/app" ] || [ -d "lib/lib" ]; then
+  fail "nested app/app or lib/lib detected after copy"
+fi
+
+# 12) security scan imported files (heuristic)
+echo "[kernel-establish] security scan of imported files"
+suspicious=()
+while IFS= read -r -d $'\0' f; do
+  # check text files only
+  mime=$(file --brief --mime-type "$f" 2>/dev/null || echo "")
+  if [[ "$mime" == text/* || "$mime" == application/javascript || "$mime" == application/json ]]; then
+    if grep -I -nE "(password|passwd|api[_-]?key|secret|token|access[_-]?token|private[_-]?key|PRIVATE_KEY)" "$f" >/dev/null 2>&1; then
+      suspicious+=("$f")
+    fi
   fi
+done < <(find app lib . -maxdepth 5 -type f -print0 2>/dev/null || true)
 
-  # Typecheck if script exists
-  if npm run |& grep -q "typecheck"; then
-    npm run typecheck
-  elif [ -f tsconfig.json ]; then
-    npx tsc --noEmit
-  else
-    echo "No typecheck script or tsconfig.json found — skipping typecheck"
-  fi
+if [ ${#suspicious[@]} -gt 0 ]; then
+  echo "ERROR: suspicious potential secrets detected:" >&2
+  for s in "${suspicious[@]}"; do echo " - $s" >&2; done
+  jq -n --arg zip "$ZIP_NAME" --arg zipsha "$ZIP_SHA256" --argjson suspicious "$(printf '%s\n' "${suspicious[@]}" | jq -R -s -c 'split("\n")[:-1]')" '{source:{historical_zip:$zip,zip_sha256:$zipsha},security:{status:"failed",suspicious:$suspicious}}' > "$REPORT_JSON" || true
+  fail "security scan failed"
+fi
 
-  # Production build
-  if npm run |& grep -q "build"; then
-    npm run build
-  else
-    echo "No build script found — skipping build"
-  fi
+# 13) prepare for verification: determine package manager and scripts
+PM="npm"
+INSTALL_CMD="npm ci"
+if [ -f yarn.lock ]; then
+  PM="yarn"
+  INSTALL_CMD="yarn install --frozen-lockfile"
+elif [ -f pnpm-lock.yaml ]; then
+  PM="pnpm"
+  INSTALL_CMD="pnpm install --frozen-lockfile"
+fi
 
-  # Tests if present
-  if npm run |& grep -q "test"; then
-    npm test || true
-  fi
+# ensure package.json exists at repo root
+if [ ! -f package.json ]; then
+  fail "package.json not found at repo root after canonicalization"
+fi
+
+# read scripts from package.json
+has_typecheck=$(jq -r '.scripts.typecheck // empty' package.json || echo "")
+has_build=$(jq -r '.scripts.build // empty' package.json || echo "")
+has_test=$(jq -r '.scripts.test // empty' package.json || echo "")
+
+# 14) install dependencies
+echo "[kernel-establish] installing dependencies using $INSTALL_CMD"
+$INSTALL_CMD || fail "dependency installation failed (command: $INSTALL_CMD)"
+
+# 15) typecheck
+if [ -n "$has_typecheck" ]; then
+  echo "[kernel-establish] running typecheck via 'npm run typecheck'"
+  npm run typecheck || fail "typecheck failed"
+elif [ -f tsconfig.json ]; then
+  echo "[kernel-establish] running tsc --noEmit"
+  npx tsc --noEmit || fail "tsc typecheck failed"
 else
-  echo "No package.json found in extracted canonical tree — skipping install/typecheck/build"
+  echo "[kernel-establish] no typecheck configured; proceeding (reported as NOT CONFIGURED)"
 fi
 
-# If we reached here without exiting, create a commit to record the canonical tree
-# Add all new files except the original ZIP
-# Ensure we do not add historical ZIP
-git add --all :/ || true
-# Unstage ZIP just in case
+# 16) build (production verification required)
+if [ -n "$has_build" ]; then
+  echo "[kernel-establish] running build via 'npm run build'"
+  npm run build || fail "build failed"
+else
+  fail "No build script found in package.json — production verification cannot be claimed"
+fi
+
+# 17) tests (optional)
+if [ -n "$has_test" ]; then
+  echo "[kernel-establish] running tests via 'npm test'"
+  npm test || fail "tests failed"
+else
+  echo "[kernel-establish] no test script configured — reported as NOT CONFIGURED"
+fi
+
+# 18) stage intended files explicitly (do NOT stage ZIP or temp files)
+echo "[kernel-establish] staging intended files for commit"
+# mandatory provenance and index
+git add "$HIST_INDEX" "$PROV_MANIFEST" "$REPORT_JSON"
+# canonical tree items
+for p in app lib package.json tsconfig.json next.config.ts next.config.js next-env.d.ts ARTIFACT_FILTRATION.md; do
+  if [ -e "$p" ]; then
+    git add "$p"
+  fi
+done
+
+# ensure ZIP is not staged
 git reset -- "$ZIP_NAME" || true
+# ensure temp workspace not staged
+git reset -- "$WORK_TMP_ROOT" || true
 
-commit_msg="Establish Auraxhero X Kernel 0.3 canonical source"
-if git diff --staged --quiet; then
-  echo "No staged changes to commit. Nothing to do."
+# 19) if commit=yes, commit & push
+if [ "$COMMIT_MODE" = "yes" ]; then
+  if git diff --staged --quiet; then
+    echo "[kernel-establish] nothing to commit"
+  else
+    git commit -m "Establish Auraxhero X Kernel 0.3 canonical source" || fail "git commit failed"
+    git push origin HEAD || fail "git push failed"
+    commit_sha=$(git rev-parse HEAD)
+  fi
 else
-  git commit -m "$commit_msg"
-  git push origin HEAD
+  echo "[kernel-establish] COMMIT_MODE is not 'yes'; skipping commit (dry-run)"
 fi
 
-echo "Script completed"
+# 20) final report
+jq -n --arg zip "$ZIP_NAME" --arg zipsha "$ZIP_SHA256" --arg canon "$CANON_ROOT" --arg extracted_at "$extracted_at" --arg kernel "$KERNEL_VERSION" \
+  --argjson imported_count "$imported_count" --argjson excluded_count "$excluded_count" \
+  --arg commit_mode "$COMMIT_MODE" --arg commit_sha "${commit_sha:-null}" \
+  '{SOURCE:{historical_zip:$zip,zip_sha256:$zipsha,integrity:"verified"},CANONICALIZATION:{canonical_root:$canon,imported_file_count:$imported_count},FILTERING:{excluded_count:$excluded_count,index:"historical-excluded/index.json"},PRESERVATION:{historical_zip_preserved:true,ordinary_source_preserved:true,temporary_artifacts_committed:false},PROVENANCE:{manifest:".provenance/manifest.json"},VERIFICATION:{install_command:$INSTALL_CMD,typecheck: (if ($has_typecheck=="") then "NOT_CONFIGURED" else "RAN" end),build: "RAN",tests: (if ($has_test=="") then "NOT_CONFIGURED" else "RAN" end)},GIT:{branch: ("$(git rev-parse --abbrev-ref HEAD)"),commit: $commit_sha},BLOCKERS:[]}' > "$REPORT_JSON"
+
+echo "[kernel-establish] finished. Report: $REPORT_JSON"
+
+exit 0
