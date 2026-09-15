@@ -56,3 +56,5 @@ jobs:
             .kernel_establish_report.json
             historical-excluded/index.json
             .provenance/manifest.json
+
+# Retriggered after verified diagnosis of the historical source's missing npm lockfile.
