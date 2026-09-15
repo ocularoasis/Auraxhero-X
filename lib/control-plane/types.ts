@@ -4,6 +4,9 @@ export type Principal = {
   id: string
   authenticated: boolean
   roles: string[]
+  scopes?: string[]
+  authStrength?: 'NONE' | 'PASSWORD' | 'MFA' | 'PASSKEY'
+  provider?: string
 }
 
 export type RequestContext = {

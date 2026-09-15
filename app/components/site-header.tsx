@@ -20,10 +20,13 @@ export function SiteHeader() {
       <nav aria-label="Primary navigation">
         {nav.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
       </nav>
-      <form className="search" action="/marketplace">
-        <label htmlFor="site-search" className="sr-only">Search capabilities and tools</label>
-        <input id="site-search" name="q" placeholder="Search capabilities, tools, or ask a question" />
-      </form>
+      <div className="header-actions">
+        <form className="search" action="/marketplace">
+          <label htmlFor="site-search" className="sr-only">Search capabilities and tools</label>
+          <input id="site-search" name="q" placeholder="Search capabilities, tools, or ask a question" />
+        </form>
+        <Link className="header-login" href="/login">Sign in</Link>
+      </div>
     </header>
   )
 }
