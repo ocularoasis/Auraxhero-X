@@ -4,6 +4,7 @@ set -Eeuo pipefail
 # Auraxhero X Kernel 0.3 establishment
 # Purpose: safely derive the canonical working tree from the preserved Kernel 0.2 artifact.
 # This script does not invent application code and never deletes the historical ZIP.
+# CI trigger revision: canonicalization must execute on the repository's current workflow definition.
 
 ZIP_NAME='AURAXHERO_X_UNIFIED_KERNEL_0.2 3.zip'
 COMMIT_MODE="${COMMIT:-no}"
@@ -32,12 +33,9 @@ ZIP_SHA256="$(sha256 "$ZIP_NAME")"
 rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
 unzip -q -o "$ZIP_NAME" -d "$EXTRACT_DIR" || fail 'historical ZIP extraction failed'
 
-# Strip packaging noise only from the temporary extraction.
 find "$EXTRACT_DIR" -type d -name '__MACOSX' -prune -exec rm -rf {} +
 find "$EXTRACT_DIR" -type f \( -name '.DS_Store' -o -name '._*' \) -delete
 
-# Locate exactly one plausible application root. A directory is plausible only when
-# package.json exists and it contains a recognizable application/build marker.
 mapfile -t package_dirs < <(find "$EXTRACT_DIR" -type f -name package.json -printf '%h\n' | sort -u)
 valid_roots=()
 for d in "${package_dirs[@]:-}"; do
@@ -47,16 +45,12 @@ for d in "${package_dirs[@]:-}"; do
 done
 
 if [ "${#valid_roots[@]}" -ne 1 ]; then
-  printf '%s\n' "${valid_roots[@]:-}" > "$WORK_DIR/roots.txt"
-  jq -n --arg zip "$ZIP_NAME" --arg sha "$ZIP_SHA256" --arg reason "expected exactly one canonical root" \
+  jq -n --arg zip "$ZIP_NAME" --arg sha "$ZIP_SHA256" --arg reason 'expected exactly one canonical root' \
     '{source:{historical_zip:$zip,zip_sha256:$sha},canonicalization:{status:"blocked",reason:$reason}}' > "$REPORT_JSON"
   fail "expected exactly one canonical application root; found ${#valid_roots[@]}"
 fi
 CANON_ROOT="${valid_roots[0]}"
 
-# Record excluded material by relative path + hash, then remove it only from the temporary
-# canonicalization tree. The ZIP remains untouched and is the historical source of truth.
-EXCLUDE_REASON=''
 EXCLUDED_TMP="$WORK_DIR/excluded.jsonl"
 : > "$EXCLUDED_TMP"
 while IFS= read -r -d '' f; do
@@ -88,8 +82,6 @@ done < <(find "$CANON_ROOT" -type f -print0)
   echo ']'
 } | jq -c '.' > "$HIST_INDEX"
 
-# Collision policy: an existing path may remain only if it is byte-identical. Divergence is
-# stopped rather than silently overwritten. This protects historical work and avoids duplicate trees.
 while IFS= read -r -d '' src; do
   rel="${src#$CANON_ROOT/}"
   dst="./$rel"
@@ -101,10 +93,8 @@ while IFS= read -r -d '' src; do
   fi
 done < <(find "$CANON_ROOT" -type f -print0)
 
-# Import the canonical source without dropping dotfiles.
 cp -a "$CANON_ROOT/." ./
 
-# The filtration policy is part of the repository record, not a claim that excluded bytes were deleted.
 cat > ARTIFACT_FILTRATION.md <<'EOF'
 # Auraxhero X — Artifact Filtration and Preservation
 
@@ -117,20 +107,12 @@ paths are byte-identical. No source is discarded merely because it is old, exper
 unused.
 EOF
 
-# Produce a deterministic provenance manifest over the canonical source files.
-file_count="$(find . -type f \
-  ! -path './.git/*' ! -path './.kernel_extract_workdir/*' ! -path './.provenance/manifest.json' \
-  ! -path './.kernel_establish_report.json' | wc -l | tr -d ' ')"
+file_count="$(find . -type f ! -path './.git/*' ! -path './.provenance/manifest.json' ! -path './.kernel_establish_report.json' | wc -l | tr -d ' ')"
 excluded_count="$(jq 'length' "$HIST_INDEX")"
-{
-  echo '{'
-  jq -n --arg zip "$ZIP_NAME" --arg zipsha "$ZIP_SHA256" --arg root "${CANON_ROOT#$EXTRACT_DIR/}" \
-    --arg kernel "$KERNEL_VERSION" --argjson files "$file_count" --argjson excluded "$excluded_count" \
-    '{historical_zip:$zip,zip_sha256:$zipsha,canonical_root:$root,kernel_version:$kernel,canonical_file_count:$files,excluded_file_count:$excluded,policy:"preserve-history-never-promote-sensitive-artifacts"}'
-  echo '}'
-} | jq -s '.[0]' > "$PROV_MANIFEST"
+jq -n --arg zip "$ZIP_NAME" --arg zipsha "$ZIP_SHA256" --arg root "${CANON_ROOT#$EXTRACT_DIR/}" \
+  --arg kernel "$KERNEL_VERSION" --argjson files "$file_count" --argjson excluded "$excluded_count" \
+  '{historical_zip:$zip,zip_sha256:$zipsha,canonical_root:$root,kernel_version:$kernel,canonical_file_count:$files,excluded_file_count:$excluded,policy:"preserve-history-never-promote-sensitive-artifacts"}' > "$PROV_MANIFEST"
 
-# High-confidence secret checks only. Documentation that mentions words such as token/secret is not a failure.
 findings="$WORK_DIR/security-findings.txt"
 : > "$findings"
 while IFS= read -r -d '' f; do
@@ -149,16 +131,10 @@ if [ -s "$findings" ]; then
 fi
 
 [ -f package.json ] || fail 'package.json missing after canonicalization'
-
-# Verify using the project's declared package manager and declared scripts; do not invent application commands.
-PACKAGE_MANAGER='npm'
-INSTALL_CMD='npm ci'
-RUN_CMD='npm run'
+PACKAGE_MANAGER='npm'; INSTALL_CMD='npm ci'; RUN_CMD='npm run'
 if [ -f pnpm-lock.yaml ]; then PACKAGE_MANAGER='pnpm'; INSTALL_CMD='pnpm install --frozen-lockfile'; RUN_CMD='pnpm run';
 elif [ -f yarn.lock ]; then PACKAGE_MANAGER='yarn'; INSTALL_CMD='yarn install --immutable'; RUN_CMD='yarn run';
 elif [ -f bun.lockb ] || [ -f bun.lock ]; then PACKAGE_MANAGER='bun'; INSTALL_CMD='bun install --frozen-lockfile'; RUN_CMD='bun run'; fi
-
-# Ensure the package manager's executable exists before attempting installation.
 command -v "$PACKAGE_MANAGER" >/dev/null 2>&1 || fail "required package manager not available: $PACKAGE_MANAGER"
 $INSTALL_CMD
 
@@ -166,26 +142,19 @@ has_typecheck="$(jq -r '.scripts.typecheck // empty' package.json)"
 has_build="$(jq -r '.scripts.build // empty' package.json)"
 has_test="$(jq -r '.scripts.test // empty' package.json)"
 TYPECHECK_STATUS='NOT_CONFIGURED'; TEST_STATUS='NOT_CONFIGURED'; BUILD_STATUS='NOT_RUN'
-
 if [ -n "$has_typecheck" ]; then $RUN_CMD typecheck; TYPECHECK_STATUS='PASSED';
 elif [ -f tsconfig.json ]; then "$PACKAGE_MANAGER" exec tsc --noEmit; TYPECHECK_STATUS='PASSED'; fi
-
 [ -n "$has_build" ] || fail 'no build script exists; production build cannot be verified'
-$RUN_CMD build
-BUILD_STATUS='PASSED'
-
+$RUN_CMD build; BUILD_STATUS='PASSED'
 if [ -n "$has_test" ]; then $RUN_CMD test; TEST_STATUS='PASSED'; fi
 
-# Final evidence report is written only after all required verification succeeds.
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
-REPORT_STATUS='verified'
 jq -n --arg zip "$ZIP_NAME" --arg sha "$ZIP_SHA256" --arg root "$CANON_ROOT" --arg kernel "$KERNEL_VERSION" \
   --arg branch "$BRANCH" --arg pm "$PACKAGE_MANAGER" --arg install "$INSTALL_CMD" \
   --arg typecheck "$TYPECHECK_STATUS" --arg build "$BUILD_STATUS" --arg tests "$TEST_STATUS" \
   --argjson excluded "$excluded_count" --argjson files "$file_count" \
   '{source:{historical_zip:$zip,zip_sha256:$sha,integrity:"verified"},canonicalization:{status:"verified",canonical_root:$root,canonical_file_count:$files},preservation:{historical_zip_preserved:true,excluded_artifacts_preserved_in_zip:true},verification:{package_manager:$pm,install_command:$install,typecheck:$typecheck,build:$build,tests:$tests},security:{status:"passed_high_confidence_scan"},git:{branch:$branch},blockers:[]}' > "$REPORT_JSON"
 
-# Stage only intentional repository material. The historical ZIP is never staged by this script.
 git add ARTIFACT_FILTRATION.md "$HIST_INDEX" "$PROV_MANIFEST" "$REPORT_JSON"
 while IFS= read -r -d '' p; do git add -- "$p"; done < <(find app lib src pages components public scripts -type f -print0 2>/dev/null || true)
 for p in package.json package-lock.json pnpm-lock.yaml yarn.lock bun.lock bun.lockb tsconfig.json next.config.ts next.config.js next.config.mjs next-env.d.ts; do [ -e "$p" ] && git add -- "$p" || true; done
