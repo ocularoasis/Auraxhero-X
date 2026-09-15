@@ -1,0 +1,45 @@
+name: Auraxhero X CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Type check
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Verify public surface does not expose internal architecture
+        run: |
+          set -euo pipefail
+          if grep -RniE --exclude-dir=.git --exclude='ARCHITECTURE.md' --exclude='*.map' \
+            'FOUNDER CONTROL PLANE|SYSTEM ARCHITECTURE|SECURITY CONTROL PLANE|private system territory|what.s protected|what.s not|internal architecture|economic algorithms|agent topology' \
+            app; then
+            echo 'Internal architecture language detected in the public application surface.' >&2
+            exit 1
+          fi
+      - name: Verify production claims are evidence-backed in source
+        run: |
+          set -euo pipefail
+          if grep -RniE --exclude-dir=.git --exclude='*.md' \
+            '12,842|8,491|214,732\.16|247|\$0\.0[1-9] / request' \
+            app lib; then
+            echo 'Fabricated dashboard metrics detected.' >&2
+            exit 1
+          fi
