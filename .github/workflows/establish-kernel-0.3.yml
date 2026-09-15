@@ -1,48 +1,59 @@
-name: Establish Kernel 0.3 (manual, non-recursive)
+name: Establish and Verify Auraxhero X Kernel 0.3
 
 on:
+  push:
+    branches: [reconcile/auraxhero-x-kernel]
+    paths:
+      - 'scripts/establish_kernel_0_3.sh'
+      - '.github/workflows/establish-kernel-0.3.yml'
+      - 'AURAXHERO_X_UNIFIED_KERNEL_0.2 3.zip'
   workflow_dispatch:
     inputs:
       commit:
-        description: "Commit verified canonical source to establish-kernel-0.3"
+        description: 'Commit verified canonical source to the current branch'
         required: true
-        default: "no"
+        default: 'no'
+        type: choice
+        options: [no, yes]
 
 permissions:
   contents: write
 
 jobs:
-  extract-and-verify:
+  establish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout full history
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
       - name: Ensure prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y unzip jq coreutils file
+          sudo apt-get install -y unzip jq coreutils file git
+          corepack enable
+          chmod +x scripts/establish_kernel_0_3.sh
 
-      - name: Make script executable
-        run: chmod +x scripts/establish_kernel_0_3.sh
-
-      - name: Run establishment script
+      - name: Establish canonical source and verify
         env:
-          COMMIT: ${{ github.event.inputs.commit }}
-        run: |
-          set -euo pipefail
-          ./scripts/establish_kernel_0_3.sh
+          COMMIT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit || 'yes' }}
+          GITHUB_ACTIONS: 'true'
+        run: ./scripts/establish_kernel_0_3.sh
 
-      - name: Upload report and artifacts
+      - name: Upload verification artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-establish-report
+          name: auraxhero-x-kernel-0.3-verification
+          if-no-files-found: ignore
           path: |
             .kernel_establish_report.json
             historical-excluded/index.json
             .provenance/manifest.json
-
-      - name: Complete
-        run: echo "Establishment workflow finished. Artifacts uploaded. If commit=yes and all verification passed, the canonical tree is committed to this branch."
