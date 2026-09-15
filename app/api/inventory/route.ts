@@ -1,5 +1,5 @@
-import { notFound } from 'next/navigation'
+import { NextResponse } from 'next/server'
 
 export async function GET() {
-  notFound()
+  return new NextResponse(null, { status: 404 })
 }
