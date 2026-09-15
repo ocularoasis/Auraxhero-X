@@ -22,11 +22,11 @@ Experience / machine interface
         -> state / infrastructure adapters
 ```
 
-See `docs/ARCHITECTURE.md` for the repository-level engineering model.
+See `docs/ARCHITECTURE.md` and `docs/MEGA_KERNEL.md` for repository-level engineering documentation.
 
 ## Intended production domain
 
-- `auraxhero.com`
-- `www.auraxhero.com`
+- `auraherox.com`
+- `www.auraherox.com`
 
 A domain is not considered live merely because it is documented here; deployment status must be verified independently.
