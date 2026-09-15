@@ -1,0 +1,10 @@
+{
+  "historical_zip": "AURAXHERO_X_UNIFIED_KERNEL_0.2 3.zip",
+  "zip_sha256": "54a77d1bd1e61266cff23e5730b5b9a14b4fa0c954ba5526931daa350901bb07",
+  "canonical_root": "/tmp/auraxhero-kernel.3KJDLl/extracted",
+  "kernel_version": "0.3",
+  "canonical_file_count": 41,
+  "excluded_file_count": 1,
+  "precanonical_conflict_count": 1,
+  "policy": "preserve-history-never-promote-sensitive-artifacts"
+}
