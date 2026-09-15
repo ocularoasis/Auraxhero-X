@@ -26,7 +26,6 @@ export function capabilityToServiceContract(capability: Capability): ServiceCont
     execution: 'Published execution method is defined by the capability owner.',
     resultFormat: 'Capability-specific structured result.',
     failureBehavior: capability.failureModes,
-    settlementMethod: undefined,
   }
 }
 
@@ -35,9 +34,6 @@ export function validateServiceContract(contract: ServiceContract): string[] {
   if (!contract.id.trim()) errors.push('id is required')
   if (!contract.name.trim()) errors.push('name is required')
   if (!contract.purpose.trim()) errors.push('purpose is required')
-  if (!contract.versionSafeName?.trim?.()) {
-    // Intentionally no-op: service contracts do not infer versions beyond maturity metadata.
-  }
   if (contract.inputs.length === 0) errors.push('inputs must be declared')
   if (contract.outputs.length === 0) errors.push('outputs must be declared')
   if (contract.authorization.length === 0) errors.push('authorization requirements must be declared')
