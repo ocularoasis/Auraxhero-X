@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CommandPalette } from './command-palette'
 
 const nav = [
   ['Home', '/'],
@@ -25,6 +26,7 @@ export function SiteHeader() {
           <label htmlFor="site-search" className="sr-only">Search capabilities and tools</label>
           <input id="site-search" name="q" placeholder="Search capabilities, tools, or ask a question" />
         </form>
+        <CommandPalette />
         <Link className="header-login" href="/login">Sign in</Link>
       </div>
     </header>
