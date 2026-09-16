@@ -52,43 +52,27 @@ export function CommandPalette() {
 
   return (
     <>
-      <button
-        type="button"
-        className="command-trigger"
-        aria-label="Open command palette"
-        aria-keyshortcuts="Control+K Meta+K"
-        onClick={() => setOpen(true)}
-      >
-        <span>⌘K</span>
-        <span>Command</span>
+      <button type="button" className="header-login" aria-label="Open command palette" aria-keyshortcuts="Control+K Meta+K" onClick={() => setOpen(true)} style={{ minWidth: 72, cursor: 'pointer' }}>
+        ⌘K
       </button>
 
       {open && (
-        <div className="command-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false) }}>
-          <section className="command-dialog" role="dialog" aria-modal="true" aria-label="Command palette">
-            <div className="command-search-row">
-              <span aria-hidden="true">⌕</span>
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search the network or run a command…"
-                aria-label="Search commands"
-              />
-              <kbd>ESC</kbd>
+        <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false) }} style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'grid', placeItems: 'start center', padding: '12vh 16px 24px', background: 'rgba(0,0,0,.68)', backdropFilter: 'blur(8px)' }}>
+          <section role="dialog" aria-modal="true" aria-label="Command palette" style={{ width: 'min(680px, 100%)', overflow: 'hidden', border: '1px solid #2b4f6d', borderRadius: 16, background: '#07101a', boxShadow: '0 30px 100px rgba(0,0,0,.55)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderBottom: '1px solid #18324a' }}>
+              <span aria-hidden="true" style={{ color: '#7acbff', fontSize: 20 }}>⌕</span>
+              <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search the network or run a command…" aria-label="Search commands" style={{ flex: 1, minWidth: 0, border: 0, outline: 0, background: 'transparent', color: '#f4f7fb', fontSize: 16 }} />
+              <kbd style={{ padding: '4px 7px', border: '1px solid #28445f', borderRadius: 6, color: '#8391a4', fontSize: 10 }}>ESC</kbd>
             </div>
-            <div className="command-list">
+            <div style={{ maxHeight: '55vh', overflowY: 'auto', padding: 8 }}>
               {filtered.length ? filtered.map((command) => (
-                <button type="button" className="command-item" key={command.href} onClick={() => go(command.href)}>
-                  <span>
-                    <strong>{command.label}</strong>
-                    <small>{command.hint}</small>
-                  </span>
-                  <span aria-hidden="true">→</span>
+                <button type="button" key={command.href} onClick={() => go(command.href)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '13px 14px', border: 0, borderRadius: 10, background: 'transparent', color: '#e9f2fc', textAlign: 'left', cursor: 'pointer' }} onMouseEnter={(event) => { event.currentTarget.style.background = '#0c1b2a' }} onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent' }}>
+                  <span><strong style={{ display: 'block', fontSize: 13 }}>{command.label}</strong><small style={{ display: 'block', marginTop: 3, color: '#7e91a5', fontSize: 11 }}>{command.hint}</small></span>
+                  <span aria-hidden="true" style={{ color: '#70baff' }}>→</span>
                 </button>
-              )) : <p className="command-empty">No matching public action.</p>}
+              )) : <p style={{ padding: '24px 14px', color: '#8798aa', fontSize: 12 }}>No matching public action.</p>}
             </div>
-            <footer className="command-footer">Public actions only · no hidden authority or fabricated capability</footer>
+            <footer style={{ padding: '10px 16px', borderTop: '1px solid #18324a', color: '#687b90', fontSize: 10 }}>Public actions only · no hidden authority or fabricated capability</footer>
           </section>
         </div>
       )}
