@@ -3,6 +3,7 @@ import { authenticationProvider } from '../../../lib/control-plane/auth'
 import { contextFromPrincipal, inspectRequest } from '../../../lib/control-plane/security'
 import { execute } from '../../../lib/control-plane/execution'
 import { discoverPublicServiceContracts } from '../../../lib/services/capability-service'
+import { economicStates, validateEconomicTicket } from '../../../lib/economics/lifecycle'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,13 @@ export async function GET(request: NextRequest) {
     schema: 'auraxhero.machine.contracts',
     schemaVersion: '1',
     requestId: inspection.requestId,
+    economicProtocol: {
+      schema: 'auraxhero.economic-ticket',
+      version: '1',
+      lifecycle: economicStates,
+      persistence: 'not_configured',
+      paymentAcceptance: false,
+    },
     execution: { discoverable: true, executable: false, reason: 'No production execution provider is configured.' },
     count: contracts.length,
     contracts,
@@ -31,6 +39,28 @@ export async function POST(request: NextRequest) {
   const context = contextFromPrincipal(principal, 'machine-execution-request', request)
   const inspection = await inspectRequest(request, context, 'AUTHENTICATED')
 
+  let ticketValid = false
+  if (inspection.decision !== 'DENY') {
+    try {
+      const body: unknown = await request.json()
+      ticketValid = validateEconomicTicket(body).success
+    } catch {
+      ticketValid = false
+    }
+  }
+
+  if (!ticketValid) {
+    return NextResponse.json({
+      schema: 'auraxhero.machine.execution',
+      schemaVersion: '1',
+      requestId: inspection.requestId,
+      status: 'INVALID_REQUEST',
+      error: 'A valid economic ticket is required before execution can be considered.',
+      execution: 'No operation was performed and no payment was accepted.',
+      authorization: inspection.decision,
+    }, { status: inspection.decision === 'DENY' ? 403 : 400 })
+  }
+
   return NextResponse.json({
     schema: 'auraxhero.machine.execution',
     schemaVersion: '1',
@@ -39,5 +69,6 @@ export async function POST(request: NextRequest) {
     error: 'Machine execution is not configured for production.',
     execution: 'No operation was performed and no payment was accepted.',
     authorization: inspection.decision,
-  }, { status: inspection.decision === 'DENY' ? 403 : 503 })
+    economicTicket: 'validated_only',
+  }, { status: 503 })
 }
