@@ -1,29 +1,27 @@
 import Link from 'next/link'
 
 const nav = [
-  ['Home', '/'],
-  ['Agents', '/agents'],
-  ['Tools', '/tools'],
-  ['Marketplace', '/marketplace'],
-  ['Network', '/network'],
-  ['Documentation', '/documentation'],
-  ['About', '/about'],
+  ['Get Help', '/report'],
+  ['Services', '/services'],
+  ['Pricing', '/pricing'],
+  ['Business', '/business'],
+  ['How It Works', '/about'],
 ] as const
 
 export function SiteHeader() {
   return (
     <header className="site-header">
-      <Link className="brand" href="/" aria-label="Auraxhero X home">
-        <span className="brand-mark" aria-hidden="true">A</span>
-        <span>AURAXHERO X</span>
+      <Link className="brand" href="/" aria-label="DeleteMeFast home">
+        <span className="brand-mark" aria-hidden="true">D</span>
+        <span>DELETEMEFAST</span>
       </Link>
       <nav aria-label="Primary navigation">
         {nav.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
       </nav>
       <div className="header-actions">
-        <form className="search" action="/marketplace">
-          <label htmlFor="site-search" className="sr-only">Search capabilities and tools</label>
-          <input id="site-search" name="q" placeholder="Search capabilities, tools, or ask a question" />
+        <form className="search" action="/report">
+          <label htmlFor="site-search" className="sr-only">Find help</label>
+          <input id="site-search" name="q" placeholder="What happened?" />
         </form>
         <Link className="header-login" href="/login">Sign in</Link>
       </div>
