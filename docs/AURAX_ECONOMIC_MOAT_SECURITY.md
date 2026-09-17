@@ -102,6 +102,39 @@ The participant is treated as a commissioned economic operator where the busines
 
 The split is a configured commercial term, not a hard-coded universal percentage. Revenue is recognized only from real, settled, attributable economic events.
 
+## Autonomous deal execution and profit capture
+
+**Do not publish a closeable opportunity merely because AuraX can identify it.** If an authorized AuraX bot has sufficient authority, verified counterparties, valid commercial terms, and a feasible execution path to complete a transaction, the bot should enter an execution workflow and work the opportunity toward closure rather than exposing the opportunity publicly.
+
+The bot must:
+
+1. Verify that autonomous execution is permitted for this opportunity, actor, jurisdiction, category, spend/commitment limit, and commercial arrangement.
+2. Verify counterparties, required credentials, eligibility, and material terms.
+3. Preserve opportunity provenance and AuraX attribution before disclosure or negotiation.
+4. Negotiate only within an explicit authority envelope; never invent authority, terms, credentials, or commitments.
+5. Obtain required human approval for actions outside the bot's authority envelope or for regulated/high-risk actions requiring human involvement.
+6. Execute through authorized transaction/payment/contracting providers only.
+7. Confirm fulfillment/settlement before recognizing revenue.
+8. Record the complete economic event, including gross value, costs, commissions, AuraX economics, and outcome evidence.
+9. If execution fails, preserve the failure evidence and return/re-route the opportunity according to policy.
+10. Only publish or route the opportunity to the human network when autonomous execution is unavailable, unauthorized, unsuccessful, or when human participation materially improves expected outcome.
+
+The goal is not to manufacture activity or merely display opportunities. The goal is **authorized execution that creates real-world economic outcomes and legitimate AuraX profit**.
+
+### Bot authority ladder
+
+`OBSERVE → QUALIFY → PREPARE → REQUEST AUTHORIZATION → NEGOTIATE WITHIN LIMITS → EXECUTE → VERIFY → SETTLE → RECONCILE`
+
+Each bot has an explicit authority envelope. The AI model itself is never the authority source.
+
+### Profit gate
+
+Before an autonomous bot commits meaningful resources, the system should evaluate:
+
+`EXPECTED AURAX ECONOMICS − EXPECTED COST − RISK RESERVE = EXPECTED CONTRIBUTION`
+
+A positive calculation does not override legal, safety, contractual, fraud, or authorization constraints. It is an economic decision signal, not permission to bypass controls.
+
 ## Executive economic hunter
 
 Executive automation can search authorized data for incremental value:
@@ -116,9 +149,9 @@ Executive automation can search authorized data for incremental value:
 - machine-commerce opportunities
 - partner opportunities
 
-Bots may surface and route opportunities, but authorization boundaries, commercial terms, and protected-data access remain explicit.
+Bots may surface and route opportunities, but authorization boundaries, commercial terms, and protected-data access remain explicit. Where a bot can legitimately close and settle a deal within its authority, it should work the deal to completion rather than prematurely publishing it as a human opportunity.
 
-The Executive OS should expose economic leakage and ROI evidence, including failed deals, abandoned claims, attribution disputes, abuse patterns, and cost-to-serve.
+The Executive OS should expose economic leakage and ROI evidence, including failed deals, abandoned claims, attribution disputes, abuse patterns, cost-to-serve, autonomous execution, human-assisted execution, and realized AuraX contribution.
 
 ## Cyber-risk / red-team intelligence
 
