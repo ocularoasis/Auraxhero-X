@@ -1,8 +1,8 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Auraxhero X',
-  description: 'Machine-age capability, agent, discovery, economic, and network ecosystem.',
+  title: 'DeleteMeFast | Cybersecurity help when something goes wrong online',
+  description: 'DeleteMeFast helps people identify online harm, organize evidence, pursue legitimate reporting and removal paths, and stay protected.',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
