@@ -4,16 +4,16 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div>
-        <strong>AURAXHERO X</strong>
-        <p>Useful capability for the machine era.</p>
+        <strong>DELETEMEFAST</strong>
+        <p>Online protection when something goes wrong.</p>
       </div>
       <nav aria-label="Footer navigation">
-        <Link href="/documentation">Documentation</Link>
-        <Link href="/about">About</Link>
-        <Link href="/marketplace">Marketplace</Link>
-        <Link href="/machine">Machine access</Link>
+        <Link href="/services">Services</Link>
+        <Link href="/pricing">Pricing</Link>
+        <Link href="/about">How it works</Link>
+        <Link href="/business">Business</Link>
       </nav>
-      <span className="muted">© {new Date().getFullYear()} Auraxhero X</span>
+      <span className="muted">© {new Date().getFullYear()} DeleteMeFast</span>
     </footer>
   )
 }
