@@ -5,7 +5,6 @@ import Link from 'next/link';
 import './report.css';
 import {
   buildEvidenceTargets,
-  createTicketId,
   questionnaireContract,
   type IdentifierKind,
 } from '../../lib/deletemefast/customer-journey';
@@ -62,7 +61,7 @@ export default function ReportPage() {
     'EMAIL',
   ]);
   const [priority, setPriority] = useState('Exposure and where my information appears');
-  const [ticketId] = useState(() => createTicketId());
+  const ticketId = null;
 
   const evidenceTargets = useMemo(
     () => buildEvidenceTargets(selectedIdentifiers),
@@ -106,8 +105,8 @@ export default function ReportPage() {
             </div>
             <div className="ticket-chip">
               <span>CASE / TICKET</span>
-              <strong>{ticketId}</strong>
-              <small>Intake created · payment required before billable work</small>
+              <strong>{ticketId ?? 'Assigned after production account setup'}</strong>
+              <small>No ticket is issued until the production account is persisted</small>
             </div>
           </header>
 
