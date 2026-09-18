@@ -93,13 +93,19 @@ export default function ReportPage() {
   }[stage];
 
   if (stage === 'dashboard') {
-    router.replace('/login?next=/onboarding')
-    return null
+    return (
+      <main className="dmf-flow">
+        <section className="flow-shell shell question-stage">
+          <p className="eyebrow">PRIVATE ACCESS</p>
+          <h1>Your private dashboard is protected.</h1>
+          <p className="stage-lede">The public intake cannot open the dashboard. Sign in after payment verification to complete the required onboarding and private questionnaire.</p>
+          <button className="continue" type="button" onClick={() => router.push('/login?next=/onboarding')}>Continue to secure account →</button>
+        </section>
+      </main>
+    )
   }
 
-  /* Legacy client-only dashboard intentionally unreachable: private dashboard access now requires authenticated server-side onboarding. */
-  if (false) {
-    return (
+  return (
       <main className="dmf-flow">
         <section className="dmf-dashboard shell">
           <header className="dashboard-head">
