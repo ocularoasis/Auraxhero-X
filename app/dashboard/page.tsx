@@ -6,16 +6,17 @@ export default async function DashboardPage() {
   if (!user) redirect('/login?next=/dashboard')
 
   const customerResponse = await supabaseRest(
-    'dmf_customers?select=id,display_name,email,case_code:onboarding_stage,onboarding_stage,onboarding_slideshow_completed_at,profile_completed_at,questionnaire_completed_at&limit=1',
+    'dmf_customers?select=id,display_name,email,onboarding_stage,onboarding_slideshow_completed_at,profile_completed_at,questionnaire_completed_at&limit=1',
     user.accessToken,
   )
   if (!customerResponse.ok) redirect('/login?next=/dashboard')
   const customers = await customerResponse.json()
   const customer = customers[0]
-  if (!customer?.questionnaire_completed_at) redirect('/questionnaire')
+  if (!customer) redirect('/onboarding')
+  if (!customer.questionnaire_completed_at) redirect('/questionnaire')
 
   const receiptResponse = await supabaseRest(
-    'dmf_service_receipts?select=id,amount_cents,currency,service_code,receipt_status,issued_at&receipt_status=eq.PAID&order=issued_at.desc&limit=1',
+    'dmf_service_receipts?select=id,amount_cents,currency,service_code,receipt_status,issued_at&receipt_status=eq.PAID&order=issued_at.desc&limit=10',
     user.accessToken,
   )
   const receipts = receiptResponse.ok ? await receiptResponse.json() : []
