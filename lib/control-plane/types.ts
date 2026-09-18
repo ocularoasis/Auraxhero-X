@@ -3,6 +3,7 @@ export type AccessLevel = 'PUBLIC' | 'AUTHENTICATED' | 'FOUNDER'
 export type Principal = {
   id: string
   authenticated: boolean
+  email?: string
   roles: string[]
   scopes?: string[]
   authStrength?: 'NONE' | 'PASSWORD' | 'MFA' | 'PASSKEY'
