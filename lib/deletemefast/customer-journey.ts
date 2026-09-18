@@ -11,6 +11,24 @@ export type IdentifierKind =
   | 'ORGANIZATION'
   | 'PLATFORM';
 
+export type IpLookupField = 'COUNTRY' | 'REGION' | 'CITY' | 'POSTAL' | 'TIMEZONE' | 'ISP' | 'ORGANIZATION' | 'NETWORK' | 'ANONYMIZER' | 'ACCURACY_RADIUS';
+
+export type IpLookupResult = {
+  ip: string
+  country?: string
+  region?: string
+  city?: string
+  postal?: string
+  timezone?: string
+  isp?: string
+  organization?: string
+  network?: string
+  anonymizer?: string
+  accuracyRadiusKm?: number
+  provider: string
+  observedAt: string
+};
+
 export type TicketState =
   | 'INTAKE'
   | 'AWAITING_IDENTITY_VERIFICATION'

@@ -53,6 +53,8 @@ export default function ReportPage() {
   const [verified, setVerified] = useState(false);
   const [profileAcknowledged, setProfileAcknowledged] = useState(false);
   const [evidenceAuthorized, setEvidenceAuthorized] = useState(false);
+  const [ipAddress, setIpAddress] = useState('');
+  const [ipEntitled, setIpEntitled] = useState(false);
   const [selectedIdentifiers, setSelectedIdentifiers] = useState<IdentifierKind[]>([
     'NAME',
     'ADDRESS',
@@ -122,6 +124,17 @@ export default function ReportPage() {
               </div>
             </section>
 
+            <section className="dashboard-card ip-card">
+              <div className="card-kicker">IP ADDRESS LOOKUP</div>
+              <h2>Check an IP address</h2>
+              <p className="muted">Enter a public IPv4 or IPv6 address to see general network and geographic information. This is approximate—not a street address or a person locator.</p>
+              <div className="ip-search">
+                <input aria-label="IP address" inputMode="url" placeholder="e.g. 203.0.113.42" value={ipAddress} onChange={(event) => setIpAddress(event.target.value)} />
+                <button type="button" disabled={!ipEntitled || !ipAddress.trim()}>{ipEntitled ? 'Look up IP →' : 'Unlock with payment'}</button>
+              </div>
+              <small className="ip-note">{ipEntitled ? 'Lookup entitlement active. Results will come from the configured GeoIP provider.' : 'Payment is required before the lookup is enabled. No lookup is performed in the background.'}</small>
+            </section>
+
             <section className="dashboard-card threat-card">
               <div className="card-kicker">EXPOSURE MAP</div>
               <h2>Where your information appears</h2>
@@ -149,6 +162,7 @@ export default function ReportPage() {
               <div className="service-suggestion"><b>Exposure discovery &amp; evidence report</b><span>Build the verified inventory first.</span><strong>Review after scope</strong></div>
               <div className="service-suggestion"><b>Before any paid work</b><span>You will see the exact service, scope, price, material terms, and applicable rules before payment.</span><strong>No payment yet</strong></div>
               <div className="service-suggestion"><b>Removal / opt-out coordination</b><span>Available where a legitimate pathway exists.</span><strong>Review after findings</strong></div>
+              <div className="service-suggestion"><b>Instant IP address lookup</b><span>General location, network, ISP/organization, timezone, and anonymizer signals where the provider supports them.</span><strong>Paid lookup</strong></div>
             </section>
 
             <section className="dashboard-card wide">

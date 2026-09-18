@@ -75,3 +75,11 @@ The dashboard is not a decorative profile page. It is the customer's view of:
 Billable work remains payment-gated. Payment creates the economic authorization; server approval creates the work authorization; only then can bounded ticket work begin.
 
 No fake search results, fake threats, fake counts, fake payments, or fake service completion states are rendered.
+
+## 5. Paid instant IP lookup
+
+The private table also offers an IP address lookup service after payment/entitlement. The customer can enter a public IPv4 or IPv6 address and receive provider-backed general network and geographic information such as country, region, city where available, postal area where available, timezone, ISP/organization, network, anonymizer indicators, and an accuracy radius where supported.
+
+The UI must describe this as approximate GeoIP information. It must never represent an IP result as a person's street address, household, or exact physical location. MaxMind explicitly states that IP geolocation cannot reliably identify a specific household, individual, or street address and recommends displaying an accuracy radius for coordinates. citeturn0search0turn0search1
+
+Payment unlocks the entitlement; the actual lookup must call a configured provider adapter. No fake IP results are rendered and no lookup occurs before entitlement is verified.
