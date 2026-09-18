@@ -1,67 +1,38 @@
-import { z } from 'zod'
-
 export const economicStates = [
-  'intent',
-  'discovery',
-  'match',
-  'terms',
-  'authorization',
-  'payment',
-  'execution',
-  'evidence',
-  'settlement',
-  'reputation',
-  'next_opportunity',
+  'intent','discovery','match','terms','authorization','payment','execution','evidence','settlement','reputation','next_opportunity',
 ] as const
-
 export type EconomicState = (typeof economicStates)[number]
 
 const transitions: Record<EconomicState, readonly EconomicState[]> = {
-  intent: ['discovery'],
-  discovery: ['match', 'intent'],
-  match: ['terms', 'discovery'],
-  terms: ['authorization', 'match'],
-  authorization: ['payment', 'terms'],
-  payment: ['execution', 'authorization'],
-  execution: ['evidence', 'execution'],
-  evidence: ['settlement', 'execution'],
-  settlement: ['reputation'],
-  reputation: ['next_opportunity'],
-  next_opportunity: ['intent'],
+  intent: ['discovery'], discovery: ['match','intent'], match: ['terms','discovery'], terms: ['authorization','match'],
+  authorization: ['payment','terms'], payment: ['execution','authorization'], execution: ['evidence','execution'],
+  evidence: ['settlement','execution'], settlement: ['reputation'], reputation: ['next_opportunity'], next_opportunity: ['intent'],
 }
 
-export const economicTicketSchema = z.object({
-  ticketId: z.string().min(1),
-  principalId: z.string().min(1),
-  authorizedActorId: z.string().min(1),
-  capabilityId: z.string().min(1),
-  intent: z.string().min(1).max(4000),
-  state: z.enum(economicStates),
-  terms: z.object({
-    amountMinor: z.number().int().nonnegative(),
-    currency: z.string().length(3),
-    unit: z.string().min(1),
-  }).strict(),
-  authorityGrantId: z.string().min(1),
-  authorityExpiresAt: z.string().datetime(),
-  maxSpendMinor: z.number().int().nonnegative(),
-  evidenceRequired: z.array(z.string().min(1)).default([]),
-  settlementCondition: z.string().min(1),
-}).strict()
-
-export type EconomicTicket = z.infer<typeof economicTicketSchema>
-
-export function canTransition(from: EconomicState, to: EconomicState): boolean {
-  return transitions[from].includes(to)
+export type EconomicTicket = {
+  ticketId:string; principalId:string; authorizedActorId:string; capabilityId:string; intent:string; state:EconomicState;
+  terms:{amountMinor:number; currency:string; unit:string}; authorityGrantId:string; authorityExpiresAt:string;
+  maxSpendMinor:number; evidenceRequired:string[]; settlementCondition:string;
 }
 
-export function transition(ticket: EconomicTicket, to: EconomicState): EconomicTicket {
-  if (!canTransition(ticket.state, to)) {
-    throw new Error(`Invalid economic transition: ${ticket.state} -> ${to}`)
-  }
-  return { ...ticket, state: to }
+export function canTransition(from:EconomicState,to:EconomicState){ return transitions[from].includes(to) }
+
+export function transition(ticket:EconomicTicket,to:EconomicState):EconomicTicket {
+  if(!canTransition(ticket.state,to)) throw new Error(`Invalid economic transition: ${ticket.state} -> ${to}`)
+  return {...ticket,state:to}
 }
 
-export function validateEconomicTicket(input: unknown) {
-  return economicTicketSchema.safeParse(input)
+export function validateEconomicTicket(input:unknown):{success:true;data:EconomicTicket}|{success:false;error:string} {
+  if(!input || typeof input!=='object') return {success:false,error:'ticket must be an object'}
+  const v=input as Record<string,unknown>
+  const required=['ticketId','principalId','authorizedActorId','capabilityId','intent','authorityGrantId','authorityExpiresAt','settlementCondition']
+  for(const k of required) if(typeof v[k]!=='string' || !(v[k] as string).trim()) return {success:false,error:`${k} is required`}
+  if(!economicStates.includes(v.state as EconomicState)) return {success:false,error:'invalid state'}
+  if(!v.terms || typeof v.terms!=='object') return {success:false,error:'terms are required'}
+  const t=v.terms as Record<string,unknown>
+  if(!Number.isInteger(t.amountMinor)||Number(t.amountMinor)<0||typeof t.currency!=='string'||t.currency.length!==3||typeof t.unit!=='string'||!t.unit.trim()) return {success:false,error:'invalid terms'}
+  if(!Number.isInteger(v.maxSpendMinor)||Number(v.maxSpendMinor)<0) return {success:false,error:'invalid maxSpendMinor'}
+  if(!Array.isArray(v.evidenceRequired)||!v.evidenceRequired.every(x=>typeof x==='string'&&x.trim())) return {success:false,error:'invalid evidenceRequired'}
+  if(typeof v.authorityExpiresAt!=='string'||Number.isNaN(Date.parse(v.authorityExpiresAt))) return {success:false,error:'invalid authorityExpiresAt'}
+  return {success:true,data:v as unknown as EconomicTicket}
 }
