@@ -1,5 +1,6 @@
-import { notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
 
+/** Staff authentication is centralized; authorization happens after authentication. */
 export default function StaffLoginPage() {
-  notFound()
+  redirect('/login')
 }
