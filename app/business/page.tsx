@@ -1,0 +1,6 @@
+import Link from 'next/link'
+import { PublicShell } from '../components/public-shell'
+
+export default function BusinessPage() {
+  return <PublicShell><main className="page-shell shell"><p className="eyebrow">BUSINESS PROTECTION</p><h1>Protect the people, accounts, and digital properties your organization depends on.</h1><p className="lede">DeleteMeFast helps organizations document digital incidents, coordinate legitimate response paths, and keep work tied to accountable cases.</p><div className="info-grid"><article className="info-card"><h2>Incident response</h2><p>Organize impersonation, exposed-information, suspicious-site, account, and reputation incidents around a traceable case.</p></article><article className="info-card"><h2>People &amp; identity</h2><p>Coordinate protection for employees, executives, domains, and business identities without exposing private operational machinery.</p></article><article className="info-card"><h2>Ongoing protection</h2><p>Establish recurring monitoring and follow-up where the selected service scope supports it.</p></article></div><div className="actions"><Link className="button primary" href="/report?type=Business%20Protection">Start a business request →</Link><Link className="button" href="/pricing">See pricing →</Link></div></main></PublicShell>
+}
