@@ -5,11 +5,18 @@ export default function LoginPage() {
     <PublicShell>
       <main className="page-shell shell">
         <p className="eyebrow">SECURE ACCESS</p>
-        <h1>Sign in to Auraxhero X.</h1>
-        <p className="lede">Secure access is available through the production identity provider. Authorization is evaluated server-side after authentication; a URL never grants a role.</p>
+        <h1>Sign in to DeleteMeFast.</h1>
+        <p className="lede">
+          Your account, service entitlement, personalized dashboard, and case history are controlled
+          by the production identity provider. No URL, browser value, or public role selector grants access.
+        </p>
         <div className="empty-state">
-          <strong>Identity provider not configured yet.</strong>
-          <p>No public role picker, simulated account, founder shortcut, or administrative backdoor is exposed while the production authentication adapter remains unconfigured.</p>
+          <strong>Production authentication is not wired in this repository yet.</strong>
+          <p>
+            Until the dedicated DeleteMeFast Supabase project and authentication provider are connected,
+            the customer dashboard and lookup services remain fail-closed. This prevents a prototype from
+            masquerading as a live account system.
+          </p>
         </div>
       </main>
     </PublicShell>
