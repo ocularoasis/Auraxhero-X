@@ -51,6 +51,8 @@ export default function ReportPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [verified, setVerified] = useState(false);
+  const [profileAcknowledged, setProfileAcknowledged] = useState(false);
+  const [evidenceAuthorized, setEvidenceAuthorized] = useState(false);
   const [selectedIdentifiers, setSelectedIdentifiers] = useState<IdentifierKind[]>([
     'NAME',
     'ADDRESS',
@@ -145,6 +147,7 @@ export default function ReportPage() {
               <h2>What we can work on</h2>
               <p className="muted">Recommendations stay tied to what your case actually contains. Payment authorizes billable work; it does not create findings that have not been observed.</p>
               <div className="service-suggestion"><b>Exposure discovery &amp; evidence report</b><span>Build the verified inventory first.</span><strong>Review after scope</strong></div>
+              <div className="service-suggestion"><b>Before any paid work</b><span>You will see the exact service, scope, price, material terms, and applicable rules before payment.</span><strong>No payment yet</strong></div>
               <div className="service-suggestion"><b>Removal / opt-out coordination</b><span>Available where a legitimate pathway exists.</span><strong>Review after findings</strong></div>
             </section>
 
@@ -204,8 +207,8 @@ export default function ReportPage() {
               <label className="field"><span>Your name</span><input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></label>
               <label className="field"><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label>
             </div>
-            <label className="consent"><input type="checkbox" /> <span>I understand that detailed information is collected only when needed for my case, and that identity verification is required before sensitive evidence searching.</span></label>
-            <button className="continue" disabled={!name || !email} onClick={() => setStage('client')}>Create profile and continue →</button>
+            <label className="consent"><input type="checkbox" checked={profileAcknowledged} onChange={(event) => setProfileAcknowledged(event.target.checked)} /> <span>I understand that detailed information is collected only when needed for my case, and that identity verification is required before sensitive evidence searching.</span></label>
+            <button className="continue" disabled={!name || !email || !profileAcknowledged} onClick={() => setStage('client')}>Create profile and continue →</button>
           </article>
         )}
 
@@ -246,7 +249,8 @@ export default function ReportPage() {
             </div>
             <label className="field"><span>What should we prioritize?</span><select value={priority} onChange={(event) => setPriority(event.target.value)}><option>Exposure and where my information appears</option><option>Where information is being sold or shared</option><option>Impersonation and identity misuse</option><option>Removal and opt-out opportunities</option><option>All of the above</option></select></label>
             <div className="notice"><b>What you will see</b><p>Each finding should identify the source, identifier observed, URL or reference when available, observation time, and the basis for any statement that a source sells or shares information. Unverified assumptions are not presented as facts.</p></div>
-            <button className="continue" disabled={!selectedIdentifiers.length} onClick={() => setStage('dashboard')}>Seat me at my table →</button>
+            <label className="consent"><input type="checkbox" checked={evidenceAuthorized} onChange={(event) => setEvidenceAuthorized(event.target.checked)} /> <span>I authorize DeleteMeFast to investigate only the identifiers I selected, using approved sources, and to show the resulting observations back to me. This authorization does not authorize unrelated searches.</span></label>
+            <button className="continue" disabled={!selectedIdentifiers.length || !evidenceAuthorized} onClick={() => setStage('dashboard')}>Seat me at my table →</button>
           </article>
         )}
       </section>
