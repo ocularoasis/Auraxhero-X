@@ -1,8 +1,8 @@
-name: Establish and Verify Auraxhero X Kernel 0.3
+name: Preserve and Verify Historical Kernel 0.3
 
 on:
   push:
-    branches: [reconcile/auraxhero-x-kernel]
+    branches: [reconcile/historical-kernel-0.3]
     paths:
       - 'scripts/establish_kernel_0_3.sh'
       - '.github/workflows/establish-kernel-0.3.yml'
@@ -50,7 +50,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: auraxhero-x-kernel-0.3-verification
+          name: historical-kernel-0.3-0.3-verification
           if-no-files-found: ignore
           path: |
             .kernel_establish_report.json
