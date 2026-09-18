@@ -18,11 +18,11 @@ export async function GET(request: NextRequest) {
   )
 
   return NextResponse.json({
-    schema: 'auraxhero.machine.contracts',
+    schema: 'deletemefast.machine.contracts',
     schemaVersion: '1',
     requestId: inspection.requestId,
     economicProtocol: {
-      schema: 'auraxhero.economic-ticket',
+      schema: 'deletemefast.economic-ticket',
       version: '1',
       lifecycle: economicStates,
       persistence: 'not_configured',
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   if (!ticketValid) {
     return NextResponse.json({
-      schema: 'auraxhero.machine.execution',
+      schema: 'deletemefast.machine.execution',
       schemaVersion: '1',
       requestId: inspection.requestId,
       status: 'INVALID_REQUEST',
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({
-    schema: 'auraxhero.machine.execution',
+    schema: 'deletemefast.machine.execution',
     schemaVersion: '1',
     requestId: inspection.requestId,
     status: 'UNAVAILABLE',
