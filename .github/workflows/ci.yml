@@ -1,4 +1,4 @@
-name: Auraxhero X CI
+name: DeleteMeFast CI
 
 on:
   push:
@@ -43,15 +43,19 @@ jobs:
         run: |
           set -euo pipefail
           if grep -RniE --exclude-dir=.git --exclude='*.md' \
-            '12,842|8,491|214,732\.16|247|\$0\.0[1-9] / request' \
+            '12,842|8,491|214,732\\.16|247|\\$0\\.0[1-9] / request' \
             app lib; then
             echo 'Fabricated dashboard metrics detected.' >&2
             exit 1
           fi
-      - name: Verify production domain identity
+      - name: Verify DeleteMeFast domain identity
         run: |
           set -euo pipefail
-          if grep -RniE --exclude-dir=.git 'auraxhero\.com|www\.auraxhero\.com' app lib docs README.md; then
-            echo 'Incorrect production domain reference detected; Auraxhero X uses auraherox.com / www.auraherox.com.' >&2
+          if grep -RniE --exclude-dir=.git 'auraxhero\\.com|www\\.auraxhero\\.com|auraherox\\.com|www\\.auraherox\\.com|marketrail\\.app|www\\.marketrail\\.app|brindlewick\\.site|www\\.brindlewick\\.site' app lib README.md; then
+            echo 'Cross-project or obsolete production domain reference detected in the DeleteMeFast application surface.' >&2
+            exit 1
+          fi
+          if ! grep -RniE 'www\\.deletemefast\\.com' README.md app lib docs; then
+            echo 'Canonical DeleteMeFast production domain is missing.' >&2
             exit 1
           fi
