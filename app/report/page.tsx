@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import './report.css';
 import {
@@ -43,6 +44,7 @@ const identifierLabels: Record<IdentifierKind, string> = {
 };
 
 export default function ReportPage() {
+  const router = useRouter()
   const [stage, setStage] = useState<Stage>('soft');
   const [softReason, setSoftReason] = useState('');
   const [softUrgency, setSoftUrgency] = useState('Not sure');
@@ -91,6 +93,12 @@ export default function ReportPage() {
   }[stage];
 
   if (stage === 'dashboard') {
+    router.replace('/login?next=/onboarding')
+    return null
+  }
+
+  /* Legacy client-only dashboard intentionally unreachable: private dashboard access now requires authenticated server-side onboarding. */
+  if (false) {
     return (
       <main className="dmf-flow">
         <section className="dmf-dashboard shell">
@@ -264,7 +272,7 @@ export default function ReportPage() {
             <label className="field"><span>What should we prioritize?</span><select value={priority} onChange={(event) => setPriority(event.target.value)}><option>Exposure and where my information appears</option><option>Where information is being sold or shared</option><option>Impersonation and identity misuse</option><option>Removal and opt-out opportunities</option><option>All of the above</option></select></label>
             <div className="notice"><b>What you will see</b><p>Each finding should identify the source, identifier observed, URL or reference when available, observation time, and the basis for any statement that a source sells or shares information. Unverified assumptions are not presented as facts.</p></div>
             <label className="consent"><input type="checkbox" checked={evidenceAuthorized} onChange={(event) => setEvidenceAuthorized(event.target.checked)} /> <span>I authorize DeleteMeFast to investigate only the identifiers I selected, using approved sources, and to show the resulting observations back to me. This authorization does not authorize unrelated searches.</span></label>
-            <button className="continue" disabled={!selectedIdentifiers.length || !evidenceAuthorized} onClick={() => setStage('dashboard')}>Seat me at my table →</button>
+            <button className="continue" disabled={!selectedIdentifiers.length || !evidenceAuthorized} onClick={() => router.push('/login?next=/onboarding')}>Continue to secure account →</button>
           </article>
         )}
       </section>
