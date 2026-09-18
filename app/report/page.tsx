@@ -6,7 +6,6 @@ import Link from 'next/link';
 import './report.css';
 import {
   buildEvidenceTargets,
-  createTicketId,
   questionnaireContract,
   type IdentifierKind,
 } from '../../lib/deletemefast/customer-journey';
@@ -64,7 +63,6 @@ export default function ReportPage() {
     'EMAIL',
   ]);
   const [priority, setPriority] = useState('Exposure and where my information appears');
-  const [ticketId] = useState(() => createTicketId());
 
   const evidenceTargets = useMemo(
     () => buildEvidenceTargets(selectedIdentifiers),
