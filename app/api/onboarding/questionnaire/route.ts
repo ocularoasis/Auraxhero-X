@@ -18,12 +18,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Complete onboarding before the questionnaire.' }, { status: 409 })
   }
 
-  const response = await supabaseRpc('dmf_complete_questionnaire', user.accessToken)
+  const response = await supabaseRpc('dmf_complete_questionnaire', user.accessToken, { p_response: body })
   if (!response.ok) {
     const detail = await response.text()
     return NextResponse.json({ error: detail.includes('payment required') ? 'Payment is required before the questionnaire can be opened.' : 'Unable to complete questionnaire.' }, { status: 409 })
   }
 
   const customer = await response.json()
-  return NextResponse.json({ ok: true, customer, answersRecorded: Object.keys(body).length })
+  return NextResponse.json({ ok: true, customer })
 }
