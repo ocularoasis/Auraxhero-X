@@ -3,11 +3,30 @@ import { cookies } from 'next/headers'
 const accessCookie = 'dmf-access-token'
 const refreshCookie = 'dmf-refresh-token'
 
+// DeleteMeFast is intentionally isolated to its dedicated Supabase project.
+// The URL is fixed as a defense-in-depth boundary; deployments may still
+// provide NEXT_PUBLIC_SUPABASE_URL, but any other Supabase project is rejected.
+const DELETE_ME_FAST_SUPABASE_URL = 'https://cmakyvrqgjsfgphfkkhr.supabase.co'
+const DELETE_ME_FAST_SUPABASE_HOST = 'cmakyvrqgjsfgphfkkhr.supabase.co'
+
 function config() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
+  const url = configuredUrl ?? DELETE_ME_FAST_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  if (!url || !key) throw new Error('DeleteMeFast Supabase environment is not configured.')
-  return { url: url.replace(/\/$/, ''), key }
+
+  if (!key) throw new Error('DeleteMeFast Supabase publishable key is not configured.')
+
+  try {
+    const host = new URL(url).hostname
+    if (host !== DELETE_ME_FAST_SUPABASE_HOST) {
+      throw new Error('DeleteMeFast Supabase project mismatch. Refusing to connect to an unapproved project.')
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('project mismatch')) throw error
+    throw new Error('DeleteMeFast Supabase URL is invalid.')
+  }
+
+  return { url: DELETE_ME_FAST_SUPABASE_URL, key }
 }
 
 export async function authHeaders(accessToken?: string) {
