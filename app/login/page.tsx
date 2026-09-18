@@ -1,17 +1,49 @@
-import { PublicShell } from '../components/public-shell'
+'use client'
+
+import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
 export default function LoginPage() {
+  const router = useRouter()
+  const params = useSearchParams()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function submit() {
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, next: params.get('next') }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error ?? 'Unable to sign in.')
+      router.push(data.next || '/onboarding')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to sign in.')
+      setBusy(false)
+    }
+  }
+
   return (
-    <PublicShell>
-      <main className="page-shell shell">
+    <main className="page-shell shell">
+      <section className="feature-panel" style={{ maxWidth: 560, margin: '72px auto' }}>
         <p className="eyebrow">SECURE ACCESS</p>
         <h1>Sign in to DeleteMeFast.</h1>
-        <p className="lede">Your private workspace is protected by production authentication. Authorization is evaluated server-side after authentication; a URL or visible role label never grants access.</p>
-        <div className="empty-state">
-          <strong>Production identity provider is not configured in this repository yet.</strong>
-          <p>No simulated account, role picker, founder shortcut, or administrative backdoor is exposed while the production authentication adapter remains unconfigured.</p>
+        <p className="lede">Your account, payment state, onboarding state, and private case records are evaluated server-side.</p>
+        <div style={{ display: 'grid', gap: 16, marginTop: 28 }}>
+          <label>Email<input value={email} onChange={e => setEmail(e.target.value)} type="email" autoComplete="email" /></label>
+          <label>Password<input value={password} onChange={e => setPassword(e.target.value)} type="password" autoComplete="current-password" /></label>
+          <button className="continue" disabled={busy || !email || !password} onClick={submit}>{busy ? 'Signing in…' : 'Sign in →'}</button>
+          {error && <p role="alert">{error}</p>}
+          <p>Need an account? <Link href="/signup">Create one</Link></p>
         </div>
-      </main>
-    </PublicShell>
+      </section>
+    </main>
   )
 }
