@@ -2,5 +2,15 @@ import Link from 'next/link'
 import { PublicShell } from '../components/public-shell'
 
 export default function AboutPage() {
-  return <PublicShell><section className="page-shell shell"><p className="eyebrow">AURAXHERO X</p><h1>Build what is useful.</h1><p className="lede">Auraxhero X is a machine-era capability ecosystem for discovering, verifying, composing, delivering, and economically connecting useful capabilities for humans and machines.</p><div className="info-grid"><article className="info-card"><h2>Utility first</h2><p>Optimize for real usefulness, reliability, trust, accessibility, resource efficiency, and measurable outcomes.</p></article><article className="info-card"><h2>Evidence over excitement</h2><p>Human signal is valuable evidence, not automatic truth. Forecasts and simulations remain distinct from verified outcomes.</p></article><article className="info-card"><h2>Human governance</h2><p>Authority remains explicit. Machines can operate bounded capabilities, but they do not become the source of authority.</p></article></div><div className="actions"><Link className="button primary" href="/marketplace">Explore capabilities →</Link></div></section></PublicShell>
+  return <PublicShell><section className="page-shell shell">
+    <p className="eyebrow">HOW IT WORKS</p>
+    <h1>Protection that starts with what happened.</h1>
+    <p className="lede">DeleteMeFast helps people organize a response to online harm. We start with a broad intake, learn what happened, verify identity before sensitive investigation, define the evidence you authorize us to examine, and keep the work tied to your private case.</p>
+    <div className="info-grid">
+      <article className="info-card"><h2>Tell us what happened</h2><p>A short first questionnaire establishes the situation, urgency, prior attempts, and the outcome you want.</p></article>
+      <article className="info-card"><h2>Build your private workspace</h2><p>A second conversation gives us the context needed to understand the incident without demanding sensitive details before they are necessary.</p></article>
+      <article className="info-card"><h2>Verify before sensitive searches</h2><p>After identity verification, you choose which identifiers you authorize us to investigate. Results and service work stay tied to your case.</p></article>
+    </div>
+    <div className="actions"><Link className="button primary" href="/report">Start private intake →</Link><Link className="button" href="/pricing">See services & prices →</Link></div>
+  </section></PublicShell>
 }
