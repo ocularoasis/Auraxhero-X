@@ -1,3 +1,5 @@
+import { createTicketId as createKernelTicketId } from './kernel';
+
 export type QuestionnaireStage = 'SOFT' | 'CLIENT' | 'IDENTITY_VERIFICATION' | 'EVIDENCE';
 
 export type IdentifierKind =
@@ -11,22 +13,32 @@ export type IdentifierKind =
   | 'ORGANIZATION'
   | 'PLATFORM';
 
-export type IpLookupField = 'COUNTRY' | 'REGION' | 'CITY' | 'POSTAL' | 'TIMEZONE' | 'ISP' | 'ORGANIZATION' | 'NETWORK' | 'ANONYMIZER' | 'ACCURACY_RADIUS';
+export type IpLookupField =
+  | 'COUNTRY'
+  | 'REGION'
+  | 'CITY'
+  | 'POSTAL'
+  | 'TIMEZONE'
+  | 'ISP'
+  | 'ORGANIZATION'
+  | 'NETWORK'
+  | 'ANONYMIZER'
+  | 'ACCURACY_RADIUS';
 
 export type IpLookupResult = {
-  ip: string
-  country?: string
-  region?: string
-  city?: string
-  postal?: string
-  timezone?: string
-  isp?: string
-  organization?: string
-  network?: string
-  anonymizer?: string
-  accuracyRadiusKm?: number
-  provider: string
-  observedAt: string
+  ip: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  postal?: string;
+  timezone?: string;
+  isp?: string;
+  organization?: string;
+  network?: string;
+  anonymizer?: string;
+  accuracyRadiusKm?: number;
+  provider: string;
+  observedAt: string;
 };
 
 export type TicketState =
@@ -87,12 +99,13 @@ export const questionnaireContract = {
 };
 
 export function createTicketId(now = new Date()): string {
-  const date = now.toISOString().slice(0, 10).replaceAll('-', '');
-  const entropy = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `DMF-${date}-${entropy}`;
+  return createKernelTicketId(now);
 }
 
-export function classifyTicketType(start: Date, end: Date): 'DISCOVERY' | 'RESPONSE' | 'MONITORING' {
+export function classifyTicketType(
+  start: Date,
+  end: Date,
+): 'DISCOVERY' | 'RESPONSE' | 'MONITORING' {
   const durationHours = Math.max(0, end.getTime() - start.getTime()) / 3_600_000;
   if (durationHours <= 2) return 'DISCOVERY';
   if (durationHours <= 168) return 'RESPONSE';
