@@ -4,6 +4,7 @@ export type DeleteMeFastService = {
   amountCents: number
   currency: 'usd'
   durationHours: number
+  mode: 'payment' | 'subscription'
 }
 
 export const DELETEMEFAST_SERVICES: Record<string, DeleteMeFastService> = {
@@ -13,6 +14,7 @@ export const DELETEMEFAST_SERVICES: Record<string, DeleteMeFastService> = {
     amountCents: 14900,
     currency: 'usd',
     durationHours: 2,
+    mode: 'payment',
   },
   ACCOUNT_COMPROMISE_RESPONSE: {
     code: 'ACCOUNT_COMPROMISE_RESPONSE',
@@ -20,6 +22,7 @@ export const DELETEMEFAST_SERVICES: Record<string, DeleteMeFastService> = {
     amountCents: 29900,
     currency: 'usd',
     durationHours: 24,
+    mode: 'payment',
   },
   IMPERSONATION_RESPONSE: {
     code: 'IMPERSONATION_RESPONSE',
@@ -27,6 +30,7 @@ export const DELETEMEFAST_SERVICES: Record<string, DeleteMeFastService> = {
     amountCents: 39900,
     currency: 'usd',
     durationHours: 48,
+    mode: 'payment',
   },
   AI_DEEPFAKE_RESPONSE: {
     code: 'AI_DEEPFAKE_RESPONSE',
@@ -34,6 +38,7 @@ export const DELETEMEFAST_SERVICES: Record<string, DeleteMeFastService> = {
     amountCents: 49900,
     currency: 'usd',
     durationHours: 72,
+    mode: 'payment',
   },
   MULTI_PLATFORM_RESPONSE: {
     code: 'MULTI_PLATFORM_RESPONSE',
@@ -41,6 +46,7 @@ export const DELETEMEFAST_SERVICES: Record<string, DeleteMeFastService> = {
     amountCents: 99900,
     currency: 'usd',
     durationHours: 168,
+    mode: 'payment',
   },
   ONGOING_PROTECTION: {
     code: 'ONGOING_PROTECTION',
@@ -48,6 +54,7 @@ export const DELETEMEFAST_SERVICES: Record<string, DeleteMeFastService> = {
     amountCents: 9900,
     currency: 'usd',
     durationHours: 720,
+    mode: 'subscription',
   },
 }
 
