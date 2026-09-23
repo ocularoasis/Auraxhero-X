@@ -40,6 +40,7 @@ export async function POST(request: Request) {
       serviceName: service.name,
       amountCents: totalForService(service),
       currency: service.currency,
+      mode: service.mode,
       successUrl: `${origin}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${origin}/pricing?payment=cancelled`,
     })
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
       amountCents: totalForService(service),
       currency: service.currency,
       serviceCode: service.code,
+      mode: service.mode,
     })
   } catch (error) {
     console.error('DeleteMeFast Stripe Checkout error', error)
