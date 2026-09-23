@@ -20,11 +20,12 @@ export async function createStripeCheckoutSession(input: {
   serviceName: string
   amountCents: number
   currency: string
+  mode: 'payment' | 'subscription'
   successUrl: string
   cancelUrl: string
 }) {
-  const body = [
-    ['mode', 'payment'],
+  const fields: [string, string][] = [
+    ['mode', input.mode],
     ['success_url', input.successUrl],
     ['cancel_url', input.cancelUrl],
     ['customer_email', input.email],
@@ -37,7 +38,17 @@ export async function createStripeCheckoutSession(input: {
     ['payment_intent_data[metadata][dmf_service_code]', input.serviceCode],
     ['metadata[dmf_customer_id]', input.customerId],
     ['metadata[dmf_service_code]', input.serviceCode],
-  ].map(([key, value]) => `${formValue(key)}=${formValue(value)}`).join('&')
+  ]
+
+  if (input.mode === 'subscription') {
+    fields.push(['line_items[0][price_data][recurring][interval]', 'month'])
+    fields.push(['subscription_data[metadata][dmf_customer_id]', input.customerId])
+    fields.push(['subscription_data[metadata][dmf_service_code]', input.serviceCode])
+  }
+
+  const body = fields
+    .map(([key, value]) => `${formValue(key)}=${formValue(value)}`)
+    .join('&')
 
   const response = await fetch(`${STRIPE_API}/checkout/sessions`, {
     method: 'POST',
@@ -58,6 +69,8 @@ export async function createStripeCheckoutSession(input: {
     id: data.id as string,
     url: data.url as string,
     paymentStatus: data.payment_status as string | undefined,
+    paymentIntent: typeof data.payment_intent === 'string' ? data.payment_intent : null,
+    subscription: typeof data.subscription === 'string' ? data.subscription : null,
   }
 }
 
@@ -80,6 +93,7 @@ export function verifyStripeWebhookSignature(payload: string, signature: string)
     .split(',')
     .filter((part) => part.startsWith('v1='))
     .map((part) => part.slice(3))
+
   if (!timestampPart || !signatures.length) return false
 
   const timestamp = Number(timestampPart.slice(2))
